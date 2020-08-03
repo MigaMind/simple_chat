@@ -2,12 +2,14 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.sql.*;
 
 public class ClientHandler {
     private MyServer myServer;
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
+    private Connection conn;
 
     private String name;
 
@@ -42,19 +44,25 @@ public class ClientHandler {
             String str = in.readUTF();
             if (str.startsWith("/auth")) {
                 String[] parts = str.split("\\s");
-                String nick = myServer.getAuthService().getNickByLoginPass(parts[1], parts[2]);
-                if (nick != null) {
-                    if (!myServer.isNickBusy(nick)) {
-                        sendMsg("/authok " + nick);
-                        name = nick;
+                try {
+                    conn = DriverManager.getConnection("jdbc:sqlite:users.db");
+                    conn.setAutoCommit(false);
+                    PreparedStatement ps = conn.prepareStatement("SELECT * FROM Users WHERE login = ?");
+                    ps.setString(1, parts[1]);
+                    ResultSet rs = ps.executeQuery();
+                    conn.commit();
+                    if(parts[2].equals(rs.getString(2))) {
+                        name = rs.getString(3);
+                        sendMsg("/authok " + name);
                         myServer.broadcastMsg(name + " зашел в чат");
                         myServer.subscribe(this);
                         return;
                     } else {
-                        sendMsg("Учетная запись уже используется");
+                        sendMsg("Неверный логин/пароль");
                     }
-                } else {
-                    sendMsg("Неверные логин/пароль");
+                    conn.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
                 }
             }
         }

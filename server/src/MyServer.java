@@ -8,16 +8,9 @@ public class MyServer {
     private final int PORT = 8199;
 
     private Map<String, ClientHandler> clients;
-    private AuthService authService;
-
-    public AuthService getAuthService() {
-        return authService;
-    }
 
     public MyServer() {
         try (ServerSocket server = new ServerSocket(PORT)) {
-            authService = new BaseAuthService();
-            authService.start();
             clients = new HashMap<>();
 
             while (true) {
@@ -28,15 +21,7 @@ public class MyServer {
             }
         } catch (IOException e) {
             System.out.println("Ошибка в работе сервера");
-        } finally {
-            if (authService != null) {
-                authService.stop();
-            }
         }
-    }
-
-    public synchronized boolean isNickBusy(String nick) {
-        return clients.containsKey(nick);
     }
 
     public synchronized void broadcastMsg(String msg) {
